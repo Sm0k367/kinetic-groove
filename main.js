@@ -1,5 +1,5 @@
 /**
- * THE SOUNDFORGE // KINETIC ENGINE v1.0
+ * BLUE MONEY // WEALTH ENGINE v1.0
  * Architect: DJ SMOKE STREAM
  */
 
@@ -7,27 +7,29 @@ const audio = document.getElementById('audio-engine');
 const startBtn = document.getElementById('start-btn');
 const bootScreen = document.getElementById('boot-screen');
 const cells = document.querySelectorAll('.cell');
-const powerLv = document.getElementById('power-lv');
+const wealthDisplay = document.getElementById('wealth-counter');
 const bars = document.querySelectorAll('.bar');
 
 let audioCtx, analyser, dataArray;
+let currentWealth = 0;
 
 startBtn.addEventListener('click', () => {
-    // Initialize Audio Context on user gesture
+    // Standard Audio Context Init
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
     const source = audioCtx.createMediaElementSource(audio);
     source.connect(analyser);
     analyser.connect(audioCtx.destination);
     
-    analyser.fftSize = 128; // Faster response for industrial beats
+    analyser.fftSize = 256;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    // Transition UI
+    // Entrance Animation
     gsap.to(bootScreen, { 
-        y: "-100%", 
-        duration: 1, 
-        ease: "power4.inOut", 
+        opacity: 0, 
+        scale: 1.1,
+        duration: 1.2, 
+        ease: "expo.inOut", 
         onComplete: () => {
             bootScreen.style.display = 'none';
             audio.play();
@@ -40,46 +42,56 @@ function update() {
     requestAnimationFrame(update);
     analyser.getByteFrequencyData(dataArray);
 
-    // Capture specific frequencies
-    const bass = dataArray[2];      // The kick drum
-    const mid = dataArray[10];      // The industrial clanging
-    const treble = dataArray[40];   // The digital noise
+    // Audio Analysis Nodes
+    const bass = dataArray[2];      // The rhythm/beat
+    const mids = dataArray[15];     // The melody/vocals
+    
+    // 1. WEALTH COUNTER LOGIC
+    // Increments faster during high-energy moments
+    if (bass > 100) {
+        currentWealth += (bass / 500);
+        wealthDisplay.innerText = currentWealth.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
 
-    // 1. Update Power Level HUD
-    const powerValue = Math.round((bass / 255) * 100);
-    powerLv.innerText = `${powerValue}%`;
-
-    // 2. Kinetic Grid Distortion
+    // 2. LIQUID GRID MOVEMENT
     cells.forEach((cell, index) => {
-        // Create a staggered movement effect
-        const skew = (mid / 20) * (index % 2 === 0 ? 1 : -1);
-        const scale = 1 + (bass / 1000);
+        const span = cell.querySelector('span');
         
-        cell.style.transform = `skewX(${skew}deg) scale(${scale})`;
+        // Gentle liquid floating
+        const moveY = Math.sin(Date.now() * 0.002 + index) * 15;
+        const pulse = 1 + (bass / 400);
         
-        // High-intensity glitch flash
-        if (bass > 230) {
-            cell.style.backgroundColor = 'rgba(255, 51, 0, 0.4)';
-            cell.style.borderColor = '#ffffff';
-        } else {
-            cell.style.backgroundColor = 'rgba(255, 51, 0, 0.05)';
-            cell.style.borderColor = 'rgba(255, 51, 0, 0.3)';
-        }
+        // Apply transform to the "$" inside the cell
+        span.style.transform = `translateY(${moveY}px) scale(${pulse})`;
+        
+        // Cell border reacts to mids
+        const borderAlpha = (mids / 255).toFixed(2);
+        cell.style.borderColor = `rgba(0, 255, 136, ${borderAlpha})`;
+        
+        // Background shift
+        cell.style.background = `rgba(0, 119, 255, ${bass / 2000})`;
     });
 
-    // 3. Visualizer Bars
+    // 3. BAR VISUALIZER (SMOOTH)
     bars.forEach((bar, i) => {
-        const h = (dataArray[i * 5] / 255) * 100;
-        bar.style.height = `${h}%`;
+        const val = dataArray[i * 10] || 0;
+        const h = (val / 255) * 100;
+        gsap.to(bar, { height: `${h}%`, duration: 0.1 });
     });
 
-    // 4. Screen-Wide Shock
-    if (bass > 240) {
+    // 4. THE LUXURY SHOCK
+    // A clean "Golden Flash" on heavy hits
+    if (bass > 235) {
         document.body.classList.add('shock');
-        // Slight camera shake
-        gsap.to("#forge-container", { x: (Math.random() - 0.5) * 10, y: (Math.random() - 0.5) * 10, duration: 0.05 });
     } else {
         document.body.classList.remove('shock');
-        gsap.to("#forge-container", { x: 0, y: 0, duration: 0.1 });
     }
 }
+
+// Ensure clean resizing
+window.addEventListener('resize', () => {
+    // Handle any responsive UI adjustments here if needed
+});
